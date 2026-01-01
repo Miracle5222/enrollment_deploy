@@ -56,9 +56,11 @@ export async function login(credentials: LoginCredentials): Promise<LoginRespons
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Login error response:', errorText);
+            console.error('Backend URL called:', url);
+            console.error('Request body:', body);
             return {
                 success: false,
-                message: `HTTP ${response.status}`,
+                message: `Backend error: HTTP ${response.status}. Error: ${errorText.substring(0, 200)}`,
             };
         }
 
