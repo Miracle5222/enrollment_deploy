@@ -7,6 +7,27 @@ import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 
+const Navbar = () => {
+  return (
+    <nav className="flex w-full items-center justify-between border-t border-b border-neutral-200 px-4 py-4 dark:border-neutral-800">
+      <div className="flex items-center gap-2">
+        <div className="size-7 rounded-full flex justify-center items-center">
+          <Image alt="logo" src="/images/logo.png" width={180} height={180} />
+        </div>
+        <Link href="/">
+          <h1 className="text-base font-bold md:text-2xl">
+            ZDSPGC-MAHAYAG CAMPUS PORTAL
+          </h1>
+        </Link>
+      </div>
+      <div>
+        <ModeToggle />
+      
+      </div>
+    </nav>
+  );
+};
+
 export default function Login() {
   return (
     <div className="relative mx-auto my-10 flex max-w-7xl flex-col items-center justify-center">
@@ -33,24 +54,3 @@ export default function Login() {
     </div>
   );
 }
-
-export const Navbar = () => {
-  return (
-    <nav className="flex w-full items-center justify-between border-t border-b border-neutral-200 px-4 py-4 dark:border-neutral-800">
-      <div className="flex items-center gap-2">
-        <div className="size-7 rounded-full flex justify-center items-center">
-          <Image alt="logo" src="/images/logo.png" width={180} height={180} />
-        </div>
-        <Link href="/">
-          <h1 className="text-base font-bold md:text-2xl">
-            ZDSPGC-MAHAYAG CAMPUS PORTAL
-          </h1>
-        </Link>
-      </div>
-      <div>
-        <ModeToggle />
-      
-      </div>
-    </nav>
-  );
-};
