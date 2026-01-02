@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         } else {
             // Otherwise use manage_data.php with action parameter
             backendUrl = new URL(backendBase.replace(/\/$/, '') + '/manage_data.php');
-            backendUrl.searchParams.append('action', action);
+            backendUrl.searchParams.append('action', action!);
         }
 
         // Copy all other query parameters
