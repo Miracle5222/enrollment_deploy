@@ -82,19 +82,21 @@ export default function Grades() {
         const studentId = localStorage.getItem("student_id") || "2025-00003";
         // Use explicit backend origin when NEXT_PUBLIC_API_BASE isn't provided.
         // In dev, Next runs on a different origin (e.g. :3000) so a leading '/' would hit Next instead of Apache/PHP.
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE
-          ? process.env.NEXT_PUBLIC_API_BASE
-          : (typeof window !== 'undefined'
-              ? (() => {
-                  const { protocol, hostname, port } = window.location;
-                  // When running Next dev on localhost:3000, route PHP requests to Apache at http://localhost
-                  if (hostname === 'localhost' && port === '3000') {
-                    return `${protocol}//localhost/online_enrollment_system/admin/api`;
-                  }
-                  return `${protocol}//${hostname}${port ? `:${port}` : ''}/online_enrollment_system/admin/api`;
-                })()
-              : '/online_enrollment_system/admin/api');
-        const url = `${apiBase}/get_student_grades.php?student_id=${studentId}`;
+        // const apiBase = process.env.NEXT_PUBLIC_API_BASE
+        //   ? process.env.NEXT_PUBLIC_API_BASE
+        //   : (typeof window !== 'undefined'
+        //       ? (() => {
+        //           const { protocol, hostname, port } = window.location;
+        //           // When running Next dev on localhost:3000, route PHP requests to Apache at http://localhost
+        //           if (hostname === 'localhost' && port === '3000') {
+        //             return `http://zdspgc-mahayag.rf.gd/admin/api`;
+        //           }
+        //           return `http://zdspgc-mahayag.rf.gd/admin/api`;
+        //         })()
+        //       : '/online_enrollment_system/admin/api');
+        
+        // Use the Next.js proxy to avoid CORS issues
+        const url = `/api/proxy?endpoint=get_student_grades.php&student_id=${encodeURIComponent(studentId)}`;
         
         const response = await fetch(url);
 
@@ -115,20 +117,27 @@ export default function Grades() {
         }
 
         const grades: Grade[] = result.grades || [];
+        const scheduleRows: ScheduleRow[] = [];
 
         // Fetch enrollments (student schedule) and merge by course_code
-        const enrollUrl = `/api/proxy?action=get_student_enrollments&student_id=${encodeURIComponent(studentId)}`;
-        const enrollResp = await fetch(enrollUrl);
-        if (!enrollResp.ok) {
-          const enrollBody = await enrollResp.text().catch(() => '<no body>');
-          const enrollStatusText = enrollResp.statusText || '';
-          console.error('Enrollments fetch failed', { enrollUrl, status: enrollResp.status, enrollStatusText, enrollBody });
-          throw new Error(`HTTP error fetching enrollments: ${enrollResp.status} ${enrollStatusText} - ${enrollBody}`);
+        
+        // Try to get enrollment data from proxy endpoint
+        let enrollData = null;
+        try {
+          const enrollUrl = `/api/proxy?action=get_student_enrollments&student_id=${encodeURIComponent(studentId)}`;
+          const enrollResp = await fetch(enrollUrl);
+          if (enrollResp.ok) {
+            enrollData = await enrollResp.json();
+            console.log('Enrollment data received:', enrollData);
+          } else {
+            console.warn('Enrollment fetch failed with status:', enrollResp.status);
+          }
+        } catch (enrollErr) {
+          console.warn('Could not fetch enrollments from proxy, will display grades only:', enrollErr);
         }
-        const enrollData = await enrollResp.json();
 
-        const scheduleRows: ScheduleRow[] = [];
-        if (enrollData.success && enrollData.enrollments) {
+        // If enrollments available, merge with grades
+        if (enrollData?.success && enrollData?.enrollments) {
           for (const e of enrollData.enrollments) {
             const code = e.course_code || e.co_code || '';
             const matched = grades.find((g: Grade) => (g.course_code || '').trim() === code.trim());
@@ -144,6 +153,24 @@ export default function Grades() {
               instructor_name: e.instructor_name || '',
               final_grade: matched ? matched.final_grade : undefined,
               remark: matched ? matched.remark : undefined,
+            });
+          }
+        } else {
+          // Fallback: If no enrollments, create schedule rows from grades alone
+          console.log('No enrollment data, creating rows from grades');
+          for (const grade of grades) {
+            scheduleRows.push({
+              schedule_id: grade.grade_id,
+              course_code: grade.course_code,
+              descriptive_title: grade.course_title,
+              units: grade.units,
+              time_in: '',
+              time_out: '',
+              day: '',
+              room_name: '',
+              instructor_name: '',
+              final_grade: grade.final_grade,
+              remark: grade.remark,
             });
           }
         }

@@ -1,129 +1,152 @@
+// app/test-enrollment/page.tsx
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-export default function TestEnrollmentSetup() {
-  const router = useRouter();
-  const [formData, setFormData] = useState({
-    student_id: '2025-00002',
-    firstname: 'John',
-    lastname: 'Smith',
-    email: 'testjohn1766858069@example.com',
-  });
+export default function TestPage() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [rawResponse, setRawResponse] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
+  const testAPI = async () => {
+    setLoading(true);
+    setError('');
+    setRawResponse('');
+    
+    try {
+      const url = '/api/grades?student_id=2025-00003';
+      console.log('Fetching from:', url);
+      
+      const response = await fetch(url);
+      
+      // Get response as text first
+      const text = await response.text();
+      console.log('Raw response:', text.substring(0, 200) + '...');
+      setRawResponse(text);
+      
+      // Check if it's HTML
+      if (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+        throw new Error('Server returned HTML instead of JSON. Check API endpoint.');
+      }
+      
+      // Try to parse as JSON
+      const result = JSON.parse(text);
+      setData(result);
+      
+    } catch (err: any) {
+      console.error('Error details:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSetupStudent = () => {
-    // Store student data in localStorage
-    localStorage.setItem('student', JSON.stringify(formData));
-    alert(`Student data stored: ${formData.student_id} - ${formData.firstname} ${formData.lastname}`);
+  const testDirectAPI = async () => {
+    setLoading(true);
+    setError('');
     
-    // Redirect to enrollment page
-    setTimeout(() => {
-      router.push('/enrollment');
-    }, 1000);
+    try {
+      const url = 'http://zdspgc-mahayag.rf.gd/admin/api/get_student_grades.php?student_id=2025-00003';
+      console.log('Testing direct API:', url);
+      
+      const response = await fetch(url);
+      const text = await response.text();
+      
+      console.log('Direct response preview:', text.substring(0, 500));
+      setRawResponse(text);
+      
+      // Check what's returned
+      if (text.includes('404') || text.includes('Not Found')) {
+        setError('API endpoint not found (404)');
+      } else if (text.includes('Error') || text.includes('exception')) {
+        setError('PHP error returned: ' + text.substring(0, 200));
+      } else {
+        setError('Unknown response format. See raw response below.');
+      }
+      
+    } catch (err: any) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Test Enrollment Setup</h1>
+    <div style={{ padding: 20, maxWidth: 1200, margin: '0 auto' }}>
+      <h1>API Debug Page</h1>
+      
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        <button 
+          onClick={testAPI}
+          disabled={loading}
+          style={{ padding: '10px 20px', background: '#0070f3', color: 'white', border: 'none', borderRadius: 5 }}
+        >
+          Test Local API Route
+        </button>
         
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Student Information</h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="student_id" className="block text-sm font-medium text-gray-700">
-                Student ID
-              </label>
-              <input
-                type="text"
-                id="student_id"
-                name="student_id"
-                value={formData.student_id}
-                onChange={handleChange}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="firstname" className="block text-sm font-medium text-gray-700">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  id="firstname"
-                  name="firstname"
-                  value={formData.firstname}
-                  onChange={handleChange}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="lastname" className="block text-sm font-medium text-gray-700">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  id="lastname"
-                  name="lastname"
-                  value={formData.lastname}
-                  onChange={handleChange}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
+        <button 
+          onClick={testDirectAPI}
+          disabled={loading}
+          style={{ padding: '10px 20px', background: '#666', color: 'white', border: 'none', borderRadius: 5 }}
+        >
+          Test Direct InfinityFree API
+        </button>
+      </div>
+      
+      {loading && <p>Loading...</p>}
+      
+      {error && (
+        <div style={{ background: '#ffebee', color: '#c62828', padding: 15, borderRadius: 5, marginBottom: 20 }}>
+          <h3>Error:</h3>
+          <p>{error}</p>
         </div>
-
-        <div className="space-y-3">
-          <button
-            onClick={handleSetupStudent}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors font-medium"
-          >
-            Set Student Data & Go to Enrollment
-          </button>
-
-          <a
-            href="/enrollment"
-            className="block w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors font-medium text-center"
-          >
-            Skip & Go to Enrollment
-          </a>
+      )}
+      
+      {data && (
+        <div style={{ marginTop: 30 }}>
+          <h2>Success! Data Received:</h2>
+          <pre style={{ background: '#f5f5f5', padding: 20, borderRadius: 5, overflow: 'auto' }}>
+            {JSON.stringify(data, null, 2)}
+          </pre>
         </div>
-
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-          <h3 className="font-semibold text-blue-900 mb-2">Test Data Available:</h3>
-          <ul className="text-sm text-blue-800 space-y-1">
-            <li>• Student ID: 2025-00002 (John Smith)</li>
-            <li>• Student ID: 2025-00003 (roneil bansas)</li>
-            <li>• Student ID: 2025-00004 (rogernel bansas)</li>
-          </ul>
+      )}
+      
+      {rawResponse && (
+        <div style={{ marginTop: 30 }}>
+          <h3>Raw Response:</h3>
+          <textarea 
+            readOnly 
+            value={rawResponse}
+            style={{ 
+              width: '100%', 
+              height: '300px', 
+              padding: 10, 
+              fontFamily: 'monospace',
+              background: '#f5f5f5',
+              border: '1px solid #ccc',
+              borderRadius: 5
+            }}
+          />
         </div>
+      )}
+      
+      <div style={{ marginTop: 40, background: '#e3f2fd', padding: 20, borderRadius: 5 }}>
+        <h3>Debug Steps:</h3>
+        <ol>
+          <li>Click "Test Direct InfinityFree API" first</li>
+          <li>Check if it returns JSON or HTML</li>
+          <li>If HTML: The PHP file doesn't exist or has errors</li>
+          <li>If JSON: Your Next.js API route might be wrong</li>
+        </ol>
+        
+        <h4>Common Issues:</h4>
+        <ul>
+          <li>PHP file path incorrect on InfinityFree</li>
+          <li>Missing `?&gt;` closing tag in PHP</li>
+          <li>Database connection errors</li>
+          <li>Output before headers (check for whitespace)</li>
+        </ul>
       </div>
     </div>
   );

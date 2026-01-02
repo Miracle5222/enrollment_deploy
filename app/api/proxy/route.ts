@@ -64,22 +64,31 @@ export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
         const action = searchParams.get('action');
+        const endpoint = searchParams.get('endpoint'); // New: allow specifying custom endpoint
 
-        if (!action) {
+        if (!action && !endpoint) {
             return NextResponse.json(
-                { success: false, message: 'Action parameter required' },
+                { success: false, message: 'Action or endpoint parameter required' },
                 { status: 400 }
             );
         }
 
         // Build the backend URL with all query parameters (configurable)
         const backendBase = process.env.BACKEND_API_BASE || 'http://localhost/online_enrollment_system/admin/api';
-        const backendUrl = new URL(backendBase.replace(/\/$/, '') + '/manage_data.php');
-        backendUrl.searchParams.append('action', action);
+        let backendUrl: URL;
+
+        // If endpoint is provided (for direct API calls like get_student_grades.php), use it directly
+        if (endpoint) {
+            backendUrl = new URL(backendBase.replace(/\/$/, '') + '/' + endpoint);
+        } else {
+            // Otherwise use manage_data.php with action parameter
+            backendUrl = new URL(backendBase.replace(/\/$/, '') + '/manage_data.php');
+            backendUrl.searchParams.append('action', action);
+        }
 
         // Copy all other query parameters
         searchParams.forEach((value, key) => {
-            if (key !== 'action') {
+            if (key !== 'action' && key !== 'endpoint') {
                 backendUrl.searchParams.append(key, value);
             }
         });
