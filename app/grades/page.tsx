@@ -1,6 +1,7 @@
 "use client";
 import { DashboardNavbar } from "@/components/component/dashbaord-navbar";
 import React, { useEffect, useState } from "react";
+import { useRequireAuth } from "@/lib/hooks/useAuth";
 import {
   Table,
   TableBody,
@@ -73,13 +74,19 @@ export default function Grades() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [schedules, setSchedules] = useState<ScheduleRow[]>([]);
+  const { user, loading: authLoading, isAuthenticated } = useRequireAuth();
 
   useEffect(() => {
     // Fetch enrollments (schedule) and grades, then merge for display
     const fetchGrades = async () => {
       try {
-        // Get student ID from localStorage or context
-        const studentId = localStorage.getItem("student_id") || "2025-00003";
+        // Prefer the logged-in student's id; fall back to localStorage if necessary
+        const studentId = user?.student_id || localStorage.getItem("student_id");
+        if (!studentId) {
+          console.warn('No student id available to fetch grades');
+          setLoading(false);
+          return;
+        }
         // Use explicit backend origin when NEXT_PUBLIC_API_BASE isn't provided.
         // In dev, Next runs on a different origin (e.g. :3000) so a leading '/' would hit Next instead of Apache/PHP.
         // const apiBase = process.env.NEXT_PUBLIC_API_BASE
@@ -193,8 +200,10 @@ export default function Grades() {
       }
     };
 
+    // don't run until auth state is resolved
+    if (authLoading) return;
     fetchGrades();
-  }, []);
+  }, [user?.student_id, authLoading]);
 
   if (loading) {
     return (
